@@ -104,6 +104,11 @@ namespace LuceneDemo.WebApi.Search
 
         public IEnumerable<Document> DoSearch(string searchTerm, int numberOfResults)
         {
+            if (String.IsNullOrEmpty(searchTerm))
+            {
+                return Enumerable.Empty<Document>();
+            }
+
             DirectoryReader reader = this._writer.GetReader(applyAllDeletes: true);
             IndexSearcher searcher = new IndexSearcher(reader);
             Sort resultsSortOrder = new Sort(SortField.FIELD_SCORE);
