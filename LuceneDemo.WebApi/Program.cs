@@ -1,4 +1,6 @@
-﻿using Customers.Data;
+﻿using System.Reflection;
+
+using Customers.Data;
 
 using EFCore.BulkExtensions;
 
@@ -40,7 +42,11 @@ builder.Services.AddControllers();
 // Swagger
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
+});
 
 var app = builder.Build();
 

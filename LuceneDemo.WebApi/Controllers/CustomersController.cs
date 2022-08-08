@@ -18,6 +18,12 @@ public class CustomersController : ControllerBase
         this._customersSearch = customersSearch;
     }
 
+    /// <summary>
+    /// Search for customers.
+    /// </summary>
+    /// <param name="q">The term to search for.</param>
+    /// <param name="maxresults">The maximum number of results to return.</param>
+    /// <returns></returns>
     [HttpGet]
     [Route("search", Name = "SearchForCustomers")]
     public ActionResult<IEnumerable<ISimpleCustomer>> Get(string q, int maxresults = 100)
