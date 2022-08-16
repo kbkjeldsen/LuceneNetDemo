@@ -78,19 +78,11 @@ namespace LuceneDemo.WebApi.Search
 
             sw.Restart();
 
-            // Irerate the customers fetched from the database and add an entry to the search index for each customer.
-            foreach (var customer in customersToIndex)
-            {
-                //Console.WriteLine($"Processing customer: {customer.CustomerKey}, {customer.FullName}");
-
-                this._writer.AddDocument(
-                    new Document
-                    {
-                        new StringField("customerKey", customer.CustomerKey, Field.Store.YES),
-                        new TextField("fullName", customer.FullName, Field.Store.YES)
-                    }
-                );
-            }
+            this._writer.AddDocuments(
+                customersToIndex.Select(customer => new Document {
+                    new StringField("customerKey", customer.CustomerKey, Field.Store.YES),
+                    new TextField("fullName", customer.FullName, Field.Store.YES)
+                }));
 
             //Flush and commit the index data to the directory
             this._writer.Commit();
