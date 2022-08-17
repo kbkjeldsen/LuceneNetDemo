@@ -4,7 +4,6 @@ using Customers.Data;
 
 using EFCore.BulkExtensions;
 
-using LuceneDemo.WebApi;
 using LuceneDemo.WebApi.Data;
 using LuceneDemo.WebApi.Search;
 
@@ -21,6 +20,7 @@ var sqLiteConnStrBuilder = new SqliteConnectionStringBuilder()
     Mode = SqliteOpenMode.Memory,
     Cache = SqliteCacheMode.Shared
 };
+
 var sqlLiteInMemoryConnection = new SqliteConnection(sqLiteConnStrBuilder.ConnectionString);
 sqlLiteInMemoryConnection.Open();
 
@@ -28,18 +28,19 @@ sqlLiteInMemoryConnection.Open();
 // Add services to the container.
 // ----------------------------------------------
 
-// Databases
+// Databases //
 //builder.Services.AddDbContext<CustomersDbContext>(options => options.UseInMemoryDatabase("Customers"));
 builder.Services.AddDbContext<CustomersDbContext>(options => options.UseSqlite(sqlLiteInMemoryConnection));
 
-// SearchEngine
-// - Add as singletion, since this service will be a common, shared service to be provided for all 
-builder.Services.AddSingleton<ICustomersSearchService, CustomersSearchService>();
+// Customers Search //
+builder.Services.AddScoped<ICustomersSearchService, CustomersSearchService>();
+// - Add as singleton, since this service will be a common, shared service to be provided for all consumers.
+builder.Services.AddSingleton<ICustomersSearchEngine, CustomersSearchEngine>();
 
-// Controllers
+// Controllers //
 builder.Services.AddControllers();
 
-// Swagger
+// Swagger //
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -48,6 +49,9 @@ builder.Services.AddSwaggerGen(options =>
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
 });
 
+// ----------------------------------------------
+// Build the app.
+// ----------------------------------------------
 var app = builder.Build();
 
 // ----------------------------------------------------------------------------
@@ -60,22 +64,16 @@ if (app.Environment.IsDevelopment())
     customersDbContext.Database.EnsureCreated();
 
     // Insert dummy data
-    var numberOfDummyCustomersToGenerate = 100000;
+    var numberOfDummyCustomersToGenerate = 10;
     customersDbContext.BulkInsert(DummyData.GetDummyCustomers(numberOfDummyCustomersToGenerate).ToList());
 }
 
 // ----------------------------------------------------------------------------
-// Initialize the search engine
+// Initialize the customer search engine
 // ----------------------------------------------------------------------------
-
-var searchEngine = new SearchEngine(app.Services.GetRequiredService<ICustomersSearchService>());
-searchEngine.Init();
-
-// Perform a test search in development environment
-if (app.Environment.IsDevelopment())
-{
-    searchEngine.Search("wal", 50);
-}
+var customersSearch = app.Services.GetService<ICustomersSearchEngine>();
+// Run the task that builds the customer index async so that the web app can continue startup.
+Task.Run(() => customersSearch.RebuildIndexAsync());
 
 // ----------------------------------------------------------------------------
 // Configure the HTTP request pipeline.
