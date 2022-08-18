@@ -47,15 +47,13 @@ public class CustomersController : ControllerBase
     /// </summary>
     /// <returns></returns>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ISimpleCustomer>>> GetCustomers()
+    public async Task<ActionResult<IEnumerable<ISimpleCustomer>>> GetCustomers(int topN = 100)
     {
-        var numOfCustToReturn = 1000;
-
         var allCustomers = this._customersDbContext.Customers;
 
-        Console.WriteLine($"Returning TOP {numOfCustToReturn} of {allCustomers.Count()} customers from database");
+        Console.WriteLine($"Returning TOP {topN} of {allCustomers.Count()} customers from database");
 
-        var customersToReturn = await allCustomers.Take(numOfCustToReturn).ToListAsync();
+        var customersToReturn = await allCustomers.Take(topN).ToListAsync();
 
         return customersToReturn;
     }
