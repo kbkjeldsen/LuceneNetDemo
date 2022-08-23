@@ -17,6 +17,8 @@ namespace LuceneDemo.WebApi.Search
 {
     public class CustomersSearchEngine : ICustomersSearchEngine
     {
+        private readonly ILogger<CustomersSearchEngine> _logger;
+
         /* Field names for Lucene Documents containing customer data */
         public const string CUSTOMER_KEY_FIELDNAME = "CustomerKey";
         public const string FULL_NAME_FIELDNAME = "FullName";
@@ -35,12 +37,14 @@ namespace LuceneDemo.WebApi.Search
         private readonly IndexWriter _writer;
         private readonly SearcherManager _searcherManager;
 
-        public CustomersSearchEngine(IServiceScopeFactory scopeFactory)
+        public CustomersSearchEngine(ILogger<CustomersSearchEngine> logger, IServiceScopeFactory scopeFactory)
         {
+            this._logger = logger;
+
             this._scopeFactory = scopeFactory;
 
             this._indexPath = Path.Combine(Environment.CurrentDirectory, this._indexName);
-            Console.WriteLine($"Using directory for index: {this._indexPath}");
+            this._logger.LogInformation("Using directory for index: {indexPath}", this._indexPath);
 
             // Open the Directory using a Lucene Directory class
             this._indexDir = FSDirectory.Open(this._indexPath);
@@ -69,7 +73,7 @@ namespace LuceneDemo.WebApi.Search
 
         public void RebuildIndex()
         {
-            Console.WriteLine("\n=== Start building the search index for customers ===\n");
+            this._logger.LogInformation("=== Start building the search index for customers ===");
 
             // Create a new scope (since DbContext is scoped by default)
             using var scope = this._scopeFactory.CreateScope();
@@ -77,7 +81,7 @@ namespace LuceneDemo.WebApi.Search
             // Get a Dbcontext from the scope
             var customersDbContext = scope.ServiceProvider.GetRequiredService<CustomersDbContext>();
 
-            Console.WriteLine("Start fetching customers from the database");
+            this._logger.LogInformation("Start fetching customers from the database");
 
             var sw = Stopwatch.StartNew();
 
@@ -87,14 +91,14 @@ namespace LuceneDemo.WebApi.Search
 
             //sw.Stop();
 
-            Console.WriteLine($"{customersToIndex.Count} customers has been fetched from the database in {((double)sw.ElapsedMilliseconds / 1000):0.00} seconds.");
+            this._logger.LogInformation("{numberOfCustomers} customers has been fetched from the database in {timeSpent:0.00} seconds.", customersToIndex.Count, ((double)sw.ElapsedMilliseconds / 1000));
 
             sw.Restart();
 
             // Remove all current documents from the index - this will not be effective until a Commit() has been called on the writer.
             this._writer.DeleteAll();
 
-            Console.WriteLine("Start indexing the customers ...");
+            this._logger.LogInformation("Start indexing the customers ...");
 
             this._writer.AddDocuments(
                 customersToIndex.Select(customer => new Document {
@@ -107,9 +111,9 @@ namespace LuceneDemo.WebApi.Search
 
             sw.Stop();
 
-            Console.WriteLine($"{customersToIndex.Count} customers has been indexed from the database in {((double)sw.ElapsedMilliseconds / 1000):0.00} seconds.");
+            this._logger.LogInformation("{numberOfCustomers} customers has been indexed from the database in {timeSpent:0.00} seconds.", customersToIndex.Count, ((double)sw.ElapsedMilliseconds / 1000));
 
-            Console.WriteLine("\n=== Finished building the search index for customers ===\n");
+            this._logger.LogInformation("=== Finished building the search index for customers ===");
         }
 
         public IEnumerable<Document> DoSearch(string searchTerm, int numberOfResults)
@@ -119,7 +123,7 @@ namespace LuceneDemo.WebApi.Search
                 return Enumerable.Empty<Document>();
             }
 
-            // Make sure that the reference manager is returning a refreshed instance  
+            // Make sure that the reference manager is returning a refreshed instance
             this._searcherManager.MaybeRefreshBlocking();
 
             IndexSearcher searcher = this._searcherManager.Acquire();
@@ -143,13 +147,13 @@ namespace LuceneDemo.WebApi.Search
 
             try
             {
-                Console.WriteLine($"Searching for customers matching the pattern: {searchTerm}");
+                this._logger.LogInformation("Searching for customers matching the pattern: {term}", searchTerm);
 
                 // Do the search and find the desired number of results
                 TopDocs topDocs = searcher.Search(query: combinedQuery, n: numberOfResults, sort: resultsSortOrder); //indicate we want the first X results
 
                 int matchCount = topDocs.TotalHits;
-                Console.WriteLine($"The search resulted in {matchCount} macthing customers.");
+                this._logger.LogInformation("The search resulted in {count} matching customers.", matchCount);
 
                 var docsToReturn = topDocs.ScoreDocs.Select(scoreDoc => searcher.Doc(scoreDoc.Doc)).ToList();
 

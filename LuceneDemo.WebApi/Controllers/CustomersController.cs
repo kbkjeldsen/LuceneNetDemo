@@ -51,7 +51,7 @@ public class CustomersController : ControllerBase
     {
         var allCustomers = this._customersDbContext.Customers;
 
-        Console.WriteLine($"Returning TOP {topN} of {allCustomers.Count()} customers from database");
+        this._logger.LogInformation("Returning TOP {topN} of {totalCount} customers from database", topN, allCustomers.Count());
 
         var customersToReturn = await allCustomers.Take(topN).ToListAsync();
 
