@@ -34,8 +34,12 @@ builder.Services.AddDbContext<CustomersDbContext>(options => options.UseSqlite(s
 
 // Customers Search //
 builder.Services.AddScoped<ICustomersSearchService, CustomersSearchService>();
-// - Add as singleton, since this service will be a common, shared service to be provided for all consumers.
+// - Add the search engine service as singleton, since this will be a common, shared service to be provided for all consumers.
 builder.Services.AddSingleton<ICustomersSearchEngine, CustomersSearchEngine>();
+// Add the search background service as hosted (singleton) service.
+// - As this service extends the 'BackgroundService' abstact class, the 'ExecuteAsync'
+//   method within the service class will be executed when the application starts.
+builder.Services.AddHostedService<SearchBackgroundService>();
 
 // Controllers //
 builder.Services.AddControllers();
@@ -67,13 +71,6 @@ if (app.Environment.IsDevelopment())
     var numberOfDummyCustomersToGenerate = 10;
     customersDbContext.BulkInsert(DummyData.GetDummyCustomers(numberOfDummyCustomersToGenerate).ToList());
 }
-
-// ----------------------------------------------------------------------------
-// Initialize the customer search engine
-// ----------------------------------------------------------------------------
-var customersSearch = app.Services.GetService<ICustomersSearchEngine>();
-// Run the task that builds the customer index async so that the web app can continue startup.
-Task.Run(() => customersSearch.RebuildIndexAsync());
 
 // ----------------------------------------------------------------------------
 // Configure the HTTP request pipeline.

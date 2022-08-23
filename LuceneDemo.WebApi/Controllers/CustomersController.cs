@@ -69,9 +69,6 @@ public class CustomersController : ControllerBase
         // Insert new dummy customers
         await this._customersDbContext.BulkInsertAsync(customersToInsert.ToList());
 
-        // Initiate a rebuild of the search index
-        await this._customersSearch.RefreshCustomersSearchIndexAsync();
-
         return await this.GetCustomers();
     }
 }
